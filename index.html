@@ -143,7 +143,7 @@
     <div id="livePanel" hidden>
       <hr style="border:0;border-top:1px solid var(--line);margin:14px 0">
       <div class="row">
-        <input id="addTitle" type="text" placeholder="Wikipedia page title, e.g. Photosynthesis" autocomplete="off" autocapitalize="off">
+        <input id="addTitle" type="text" placeholder="Enter a topic, e.g. Newton’s first law of motion" autocomplete="off" autocapitalize="off">
         <select id="addSpeed" aria-label="How fast does this topic change?">
           <option value="slow">changes slowly</option>
           <option value="stable">almost never changes</option>
@@ -459,6 +459,17 @@ async function wikiText(title) {
   return page.extract.slice(0, 4000);
 }
 
+// Resolve a natural-language topic to the closest matching Wikipedia article title.
+// This lets users type queries such as "newtons first law of motion" instead of
+// needing to know the exact capitalization and punctuation of the article title.
+async function wikiSearchTitle(query) {
+  const data = await wikiGet({
+    action: "query", list: "search", srsearch: query, srnamespace: "0", srlimit: "5"
+  });
+  const results = data.query && data.query.search;
+  return results && results.length ? results[0].title : null;
+}
+
 // =============== browser storage helpers (can be blocked, so never rely on it) ===============
 const store = {
   get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
@@ -526,7 +537,7 @@ function renderOld(topics) {
     `<ul class="hand">${t.notes.map(p => `<li>${esc(p)}</li>`).join("")}</ul></div>`).join("");
 }
 function emptyNotes() {
-  const html = '<div class="empty">No topics yet. Type a Wikipedia page title above, for example Photosynthesis, and press Add topic.</div>';
+  const html = '<div class="empty">No topics yet. Type a topic above, for example Photosynthesis or Newton’s first law of motion, and press Add topic.</div>';
   $("after").innerHTML = html; $("before").innerHTML = html;
 }
 
@@ -664,11 +675,16 @@ async function runComparison() {
 async function addTopic() {
   if (busy) return;
   const raw = $("addTitle").value.trim();
-  if (!raw) { setMsg("Type a Wikipedia page title first, for example Photosynthesis.", true); return; }
+  if (!raw) { setMsg("Type a topic first, for example Photosynthesis.", true); return; }
   busy = true; $("addBtn").disabled = true; setMsg("Adding…");
   try {
-    const v = (await wikiVersions([raw]))[raw];
-    if (!v) throw new Error(`No Wikipedia page called "${raw}" was found. Use the exact page title.`);
+    let v = (await wikiVersions([raw]))[raw];
+    // If the input is not an exact page title, search Wikipedia and use its top result.
+    if (!v) {
+      const match = await wikiSearchTitle(raw);
+      if (match) v = (await wikiVersions([match]))[match];
+    }
+    if (!v) throw new Error(`No Wikipedia article matching "${raw}" was found. Try a shorter or more specific topic.`);
     const text = await wikiText(v.title);
     if (/\b(may|might) (also )?refer to\b/i.test(text.slice(0, 300)))
       throw new Error(`"${v.title}" is a disambiguation page (it lists several meanings). Use a more specific title, for example "Data structure" instead of "DSA".`);

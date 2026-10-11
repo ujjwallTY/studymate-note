@@ -1,0 +1,744 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StudyMate Fresh Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f3f4f7; --card: #ffffff; --ink: #1c2233; --muted: #5d6578; --line: #e2e5ec; --brand: #2d4a8a;
+    --paper: #fffef6; --rule: #d6e4f2; --margin: #e58f8f;
+    --ok: #3b6b57;      --ok-bg: #e4f1ea;
+    --rechecked: #1d4f91; --rechecked-bg: #e0ecfb;
+    --updated: #14663a;  --updated-bg: #d8f2e0;
+    --old: #7a5200;      --old-bg: #fff0c2;
+    --outdated: #9a1f16; --outdated-bg: #fde0dc;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }   /* so layout rules like flex never un-hide things */
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; line-height: 1.5; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 20px 16px 40px; }
+  header h1 { font-size: 1.55rem; margin: 0 0 4px; letter-spacing: -.01em; }
+  header p { margin: 0 0 18px; color: var(--muted); }
+  h2.section { font-size: 1.05rem; margin: 26px 0 10px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin-bottom: 16px; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 8px 0; }
+  .muted { color: var(--muted); font-size: .85rem; }
+  label { display: inline-flex; gap: 8px; align-items: center; }
+
+  input[type=text], input[type=password], select {
+    font: inherit; font-size: 16px; padding: 10px 12px; border: 1px solid #c3c8d4; border-radius: 8px; background: #fff;
+    min-height: 44px; color: var(--ink); }
+  input[type=text], input[type=password] { flex: 1 1 220px; min-width: 0; }
+  input[type=range] { width: 100%; max-width: 320px; accent-color: var(--brand); height: 32px; }
+  button { font: inherit; font-size: 15px; min-height: 44px; padding: 8px 16px; border: 0; border-radius: 8px;
+           background: var(--brand); color: #fff; cursor: pointer; font-weight: 600; }
+  button.ghost { background: #fff; color: var(--brand); border: 1px solid var(--brand); }
+  button.small { min-height: 36px; padding: 4px 12px; font-size: 14px; }
+  button:disabled { opacity: .55; cursor: wait; }
+  .seg { display: inline-flex; border: 1px solid var(--brand); border-radius: 8px; overflow: hidden; }
+  .seg button { border-radius: 0; background: #fff; color: var(--brand); }
+  .seg button.on { background: var(--brand); color: #fff; }
+  .budget-val { font-weight: 700; font-size: 1.1rem; min-width: 1.5em; }
+
+  .msg { padding: 12px 14px; border-radius: 10px; margin-bottom: 16px; background: var(--old-bg); color: #4a3500; border: 1px solid #f0d98a; }
+  .msg.bad { background: var(--outdated-bg); color: #6d140d; border-color: #f0b4ad; }
+  .banner { padding: 12px 14px; border-radius: 10px; margin-bottom: 14px; background: var(--outdated-bg); color: #6d140d; border: 1px solid #f0b4ad; }
+
+  .chips { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+  .chip { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: #f7f8fb; border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }
+  .chip b { flex: 1 1 160px; word-break: break-word; }
+
+  .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px; }
+  .stat { background: var(--card); border: 1px solid var(--line); border-left: 5px solid var(--brand); border-radius: 12px; padding: 14px 16px; }
+  .stat .n { font-size: 2rem; font-weight: 700; line-height: 1.1; }
+  .stat .l { font-weight: 600; margin-top: 2px; }
+  .stat .s { color: var(--muted); font-size: .8rem; margin-top: 4px; }
+  .stat.s-updated { border-left-color: var(--updated); } .stat.s-flag { border-left-color: var(--outdated); }
+  .stat.s-ai { border-left-color: #7b4bb3; }
+
+  .stage { display: grid; grid-template-columns: 1.55fr 1fr; gap: 18px; align-items: start; }
+  .stage.solo { grid-template-columns: 1fr; }
+  .col-title { font-weight: 700; margin: 0 0 2px; }
+  .col-sub { color: var(--muted); font-size: .82rem; margin: 0 0 10px; }
+
+  /* The notebook: the only place with handwriting */
+  .notebook { background: var(--paper); border-left: 4px solid var(--margin); border-radius: 4px; padding: 6px 20px 20px 24px;
+              background-image: repeating-linear-gradient(transparent, transparent 33px, var(--rule) 34px);
+              box-shadow: 0 2px 10px rgba(30,40,70,.15); min-width: 0; }
+  .notebook.old { opacity: .92; }
+  .hand { font-family: 'Caveat', 'Segoe Script', 'Bradley Hand', 'Comic Sans MS', cursive; color: #1d2c52; }
+  .topic { padding-bottom: 10px; }
+  .topic h3 { margin: 0; padding-top: 12px; font-size: 1.9rem; line-height: 34px; font-weight: 700; word-break: break-word;
+              text-decoration: underline wavy #1d2c5233; text-underline-offset: 6px; }
+  .pill { display: inline-block; font-family: system-ui, sans-serif; font-size: .75rem; font-weight: 700; line-height: 1;
+          padding: 6px 10px; border-radius: 999px; margin: 8px 0 4px; letter-spacing: .01em; }
+  .p-ok { background: var(--ok-bg); color: var(--ok); } .p-rechecked { background: var(--rechecked-bg); color: var(--rechecked); }
+  .p-updated { background: var(--updated-bg); color: var(--updated); } .p-old { background: var(--old-bg); color: var(--old); }
+  .p-outdated { background: var(--outdated-bg); color: var(--outdated); }
+  .p-unverified { background: #e9e6f5; color: #473a86; }
+  .kp-label { font-family: system-ui, sans-serif; font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); line-height: 24px; margin-top: 6px; }
+  .topic ul { margin: 0; padding-left: 22px; }
+  .topic li { font-size: 1.5rem; line-height: 34px; }
+  .topic li::marker { color: var(--margin); }
+
+  .why { margin: 8px 0 0; font-family: system-ui, sans-serif; font-size: .85rem; line-height: 1.45; background: #fff;
+         border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }
+  .why summary { cursor: pointer; font-weight: 600; color: var(--brand); }
+  .why dl { margin: 8px 0 2px; display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; }
+  .why dt { color: var(--muted); } .why dd { margin: 0; word-break: break-word; }
+  .riskbar { display: inline-block; vertical-align: middle; width: 90px; height: 8px; background: #e6e8ee; border-radius: 4px; overflow: hidden; margin-right: 8px; }
+  .riskbar i { display: block; height: 100%; background: var(--brand); }
+  .empty { padding: 22px 4px; color: var(--muted); font-family: system-ui, sans-serif; }
+
+  table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  th { color: var(--muted); font-weight: 600; font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; }
+  tr.cur td { background: #eef3fd; font-weight: 600; }
+  .bar { display: flex; height: 12px; min-width: 120px; border-radius: 6px; overflow: hidden; background: #eceef3; }
+  .bar i.u { background: #2f9e62; } .bar i.r { background: #5b8fd6; } .bar i.f { background: #d9534a; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: .8rem; color: var(--muted); margin: 8px 0 0; }
+  .legend span::before { content: ''; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; background: var(--c); }
+  .takeaway { margin: 12px 0 0; padding: 10px 12px; background: #f4f6fb; border-radius: 8px; }
+  .scroll { overflow-x: auto; }
+
+  details.about { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 18px; margin-top: 22px; }
+  details.about summary { cursor: pointer; font-weight: 700; }
+  details.about h4 { margin: 16px 0 4px; }
+  .foot { color: var(--muted); font-size: .8rem; text-align: center; margin-top: 22px; }
+
+  @media (max-width: 860px) { .stage { grid-template-columns: 1fr; } .cards { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 420px) { .stat .n { font-size: 1.6rem; } .topic h3 { font-size: 1.6rem; } .topic li { font-size: 1.35rem; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>StudyMate Fresh Notes</h1>
+    <p>Handwritten-style study notes that notice when their source data is outdated, and say so.</p>
+  </header>
+
+  <div id="msg" class="msg" hidden role="status"></div>
+
+  <div class="card">
+    <div class="row">
+      <div class="seg" role="group" aria-label="Mode">
+        <button id="modeSample" class="on" type="button">Sample demo</button>
+        <button id="modeLive" type="button">My topics (live)</button>
+      </div>
+      <label class="muted"><input id="showOld" type="checkbox" checked> Show the old way next to it</label>
+    </div>
+    <div class="row">
+      <label for="budget"><b>Verification budget</b></label>
+      <input id="budget" type="range" min="0" max="10" value="2" aria-describedby="budgetHelp">
+      <span id="budgetVal" class="budget-val">2</span>
+      <span class="muted">re-checks per run</span>
+    </div>
+    <div id="budgetHelp" class="muted">Each re-check fetches the source page, and with an AI key also makes one AI request. A smaller budget saves requests but leaves more notes flagged for you to verify.</div>
+    <div id="status" class="muted" style="margin-top:8px"></div>
+
+    <div id="livePanel" hidden>
+      <hr style="border:0;border-top:1px solid var(--line);margin:14px 0">
+      <div class="row">
+        <input id="addTitle" type="text" placeholder="Wikipedia page title, e.g. Photosynthesis" autocomplete="off" autocapitalize="off">
+        <select id="addSpeed" aria-label="How fast does this topic change?">
+          <option value="slow">changes slowly</option>
+          <option value="stable">almost never changes</option>
+          <option value="fast">changes fast</option>
+          <option value="very_fast">changes very fast</option>
+        </select>
+        <button id="addBtn" type="button">Add topic</button>
+      </div>
+      <div class="row" id="keyRow">
+        <input id="apiKey" type="password" placeholder="Optional: Google AI Studio (Gemini) key" autocomplete="off">
+        <label class="muted"><input id="rememberKey" type="checkbox"> remember on this device</label>
+      </div>
+      <div class="muted" id="keyHelp">Without a key, notes are the first sentences of the page and re-checks use a plain text match. The key is only sent to Google and is never stored in this file.
+        Live mode uses Wikipedia page revisions as a stand-in for textbook or knowledge-graph version changes.</div>
+      <div class="row muted" id="examples">Try: <button class="ghost small" type="button" data-ex="Photosynthesis">Photosynthesis</button> <button class="ghost small" type="button" data-ex="Black hole">Black hole</button> <button class="ghost small" type="button" data-ex="Data structure">Data structure</button></div>
+      <div id="chips" class="chips"></div>
+    </div>
+  </div>
+
+  <section class="cards" id="summary" aria-label="Verification summary">
+    <div class="stat"><div class="n" id="sumChecked">0</div><div class="l">Topics checked</div><div class="s" id="subChecked"></div></div>
+    <div class="stat s-updated"><div class="n" id="sumUpdated">0</div><div class="l">Notes updated</div><div class="s" id="subUpdated"></div></div>
+    <div class="stat s-flag"><div class="n" id="sumFlagged">0</div><div class="l">Need verification</div><div class="s" id="subFlagged"></div></div>
+    <div class="stat s-ai"><div class="n" id="sumAI">0</div><div class="l">AI verification requests</div><div class="s" id="subAI"></div></div>
+  </section>
+
+  <div id="banner" class="banner" hidden></div>
+
+  <div id="stage" class="stage">
+    <div>
+      <p class="col-title">Your notes, with freshness check</p>
+      <p class="col-sub">Each topic shows how fresh it is and why. Open "Why this status?" for the details.</p>
+      <div class="notebook" id="after"></div>
+    </div>
+    <div id="oldCol">
+      <p class="col-title">The old way</p>
+      <p class="col-sub">Trusts the graph as it is. No checks, no warnings.</p>
+      <div class="notebook old" id="before"></div>
+    </div>
+  </div>
+
+  <h2 class="section">Cost versus freshness</h2>
+  <div class="card">
+    <div class="muted" style="margin-bottom:8px">Same topics, different verification budgets. The numbers are computed by running the real check at each budget.</div>
+    <div class="row"><button id="cmpBtn" class="ghost" type="button" hidden>Compare budgets</button><span id="cmpNote" class="muted"></span></div>
+    <div class="scroll"><table id="cmpTable" hidden>
+      <thead><tr><th>Budget</th><th>Re-checks used</th><th>Updated</th><th>Re-checked, no change</th><th>Flagged for manual check</th><th>Result</th></tr></thead>
+      <tbody id="cmpBody"></tbody>
+    </table></div>
+    <div class="legend" id="cmpLegend" hidden>
+      <span style="--c:#2f9e62">updated</span><span style="--c:#5b8fd6">re-checked, no change</span><span style="--c:#d9534a">flagged for manual check</span>
+    </div>
+    <div id="takeaway" class="takeaway" hidden></div>
+  </div>
+
+  <details class="about">
+    <summary>About this prototype: how it works, trade-offs and limits</summary>
+    <h4>The problem</h4>
+    <p>Notes come from a knowledge graph that can lag behind the real source. If a page or textbook changes and the graph does not, students get wrong notes without knowing it.</p>
+    <h4>What it does</h4>
+    <ol>
+      <li><b>Age score (free).</b> Each topic has a speed of change. The older the notes, the higher the risk, and fast topics age quicker.</li>
+      <li><b>Version check (one cheap request for all topics).</b> The revision the notes were made from is compared with the current revision of the source. A different one means the notes are outdated for sure.</li>
+      <li><b>Limited re-check.</b> Only the riskiest topics are re-checked, riskiest first, up to the verification budget. The page text is compared with the notes (by Gemini if you add a key, otherwise by a plain text match) and notes that no longer match are rewritten.</li>
+      <li><b>Honest warnings.</b> If a risky topic cannot be checked (budget used up, source unreachable, page missing), the old notes are shown with a warning and the reason. Nothing is silently trusted.</li>
+    </ol>
+    <p>Low-risk topics skip all of this, so normal topics behave exactly as before and cost nothing extra.</p>
+    <h4>Stand-in for textbook versions</h4>
+    <p>This prototype uses <b>Wikipedia page revisions</b> as a stand-in for textbook or knowledge-graph version changes. In a real StudyMate the "latest version" would come from the textbook publisher or the graph's own change feed. Only the source lookup would change, not the risk logic.</p>
+    <h4>Real versus simulated</h4>
+    <ul>
+      <li><b>Sample demo</b>: short made-up texts, simulated source and simulated checks. No network and no AI.</li>
+      <li><b>My topics (live)</b>: real Wikipedia lookups. Re-checks use Gemini if you add a key, otherwise a plain text match. The "AI verification requests" card counts only real Gemini requests.</li>
+      <li><b>Simulate stale (demo)</b> button: replaces a topic's saved notes with an outdated placeholder and an older revision, so you can watch the check work. The staleness is simulated and labelled as such. The correction itself comes from the real, current page.</li>
+    </ul>
+    <h4>Trade-offs</h4>
+    <p>More re-checks mean better accuracy but more cost (a page fetch plus an AI call, which matters on free limits). Fewer re-checks are cheaper but leave more notes flagged for manual verification. The thresholds (25% and 60%) and the half-lives are my own guesses and would need tuning on real data.</p>
+    <h4>Limits</h4>
+    <ul>
+      <li>A new revision does not always mean the facts changed (it may be a typo fix), so some updates are unnecessary.</li>
+      <li>The AI can make mistakes. Notes are only as good as the source page, and only the intro of a Wikipedia page is used.</li>
+      <li>A silent edit with no new revision is only caught by the age score.</li>
+      <li>The check does not write refreshed notes back to the saved graph. They are re-derived on each run (results are cached for ten minutes to save requests).</li>
+      <li>If the source lookup fails, version checks are skipped and every topic is judged by age only. The page says so.</li>
+    </ul>
+  </details>
+  <div class="foot">Hackathon prototype. Your topics and key stay in your browser.</div>
+</div>
+
+<script>
+"use strict";
+// =============== core logic: age score, version check, limited re-check, honest warnings ===============
+const HALF_LIFE = { stable: 3000, slow: 1000, fast: 300, very_fast: 90 };   // days for trust to halve
+const SPEED_TEXT = { stable: "almost never", slow: "slowly", fast: "fast", very_fast: "very fast" };
+const OK_BELOW = 0.25;      // risk under this: use the notes as they are
+const OUTDATED_AT = 0.60;   // unverified risk at or over this: strong warning
+const DAY = 86400000;
+
+const daysBetween = (a, b) => Math.max(0, Math.floor((a - b) / DAY));
+const ageRisk = (t, today) => 1 - Math.pow(0.5, daysBetween(today, t.lastChecked) / HALF_LIFE[t.speed]);
+const pct = x => Math.round(x * 100) + "%";
+const dateText = ms => new Date(ms).toISOString().slice(0, 10);
+
+/*
+  topics: [{name,title,speed,lastChecked(ms),rev,notes[]}]
+  latest: {title: revision}; ctx.lookupOk says whether the source lookup worked at all
+  verify(t) -> {points, method}; budget = max number of re-checks
+*/
+async function checkTopics(topics, latest, verify, today, budget, ctx) {
+  const out = new Map();
+  const need = [];
+  let fetches = 0;
+
+  for (const t of topics) {
+    const cur = latest[t.title];
+    const missing = ctx.lookupOk && cur === undefined;          // page renamed or deleted
+    const versionUnknown = !ctx.lookupOk;                       // lookup failed: cannot compare versions
+    const changed = !missing && !versionUnknown && t.rev !== null && cur !== t.rev;
+    const risk = changed ? 1 : ageRisk(t, today);
+    const b = { t, risk, changed, missing, versionUnknown, latestRev: cur === undefined ? null : cur,
+                days: daysBetween(today, t.lastChecked) };
+
+    if (missing) { out.set(t.name, flagged(b, "outdated", "Source page not found, so these notes cannot be verified.")); continue; }
+    if (versionUnknown) {          // never call a topic "up to date" if its version could not be compared
+      out.set(t.name, flagged(b, risk >= OUTDATED_AT ? "outdated" : risk >= OK_BELOW ? "old" : "unverified",
+                              "Source unreachable: the version could not be compared and no re-check was possible."));
+      continue;
+    }
+    if (risk < OK_BELOW) { out.set(t.name, fresh(b)); continue; }
+    need.push(b);
+  }
+
+  need.sort((x, y) => y.risk - x.risk);                          // riskiest first
+  let left = budget;
+  for (const b of need) {
+    if (left <= 0) {
+      out.set(b.t.name, flagged(b, b.changed || b.risk >= OUTDATED_AT ? "outdated" : "old",
+                                `Not re-checked: the verification budget (${budget}) was used up.`));
+      continue;
+    }
+    left--; fetches++;
+    try {
+      const res = await verify(b.t);
+      const same = JSON.stringify(res.points) === JSON.stringify(b.t.notes);
+      out.set(b.t.name, { ...base(b), status: same ? "rechecked" : "updated", points: same ? b.t.notes : res.points,
+        flagged: false, method: res.method,
+        action: same ? "Re-checked against the source: the notes still match."
+                     : "Re-checked against the source and rewritten from it." });
+    } catch (e) {                                                // never crash, never silently trust
+      out.set(b.t.name, flagged(b, b.changed || b.risk >= OUTDATED_AT ? "outdated" : "old",
+                                `Re-check failed (${e.message}). Old notes kept with a warning.`));
+    }
+  }
+  return { rows: topics.map(t => out.get(t.name)), fetches };
+}
+
+function base(b) {
+  return { name: b.t.name, speed: b.t.speed, risk: b.risk, changed: b.changed, storedRev: b.t.rev, latestRev: b.latestRev,
+           lastChecked: b.t.lastChecked, days: b.days, demo: !!b.t.demo, versionUnknown: b.versionUnknown,
+           reason: reasonFor(b), method: null };
+}
+function fresh(b) {
+  return { ...base(b), status: "ok", points: b.t.notes, flagged: false, action: "Not re-checked: risk is low." };
+}
+function flagged(b, status, action) {
+  return { ...base(b), status, points: b.t.notes, flagged: true, action };
+}
+function reasonFor(b) {
+  const t = b.t;
+  if (b.missing) return "The source page could not be found (renamed or deleted?).";
+  if (b.changed) return `Source version changed: the notes were made from revision ${t.rev}, but the source is now at revision ${b.latestRev}.`;
+  const age = `last checked ${b.days} days ago, for a topic that changes ${SPEED_TEXT[t.speed]}`;
+  if (b.versionUnknown) return `The source version could not be compared, so freshness is unconfirmed. Judged by age only: ${age} (estimated risk ${pct(b.risk)}).`;
+  if (b.risk >= OK_BELOW) return `Old, not changed: ${age}. The source version is the same (revision ${t.rev}), but the estimated risk ${pct(b.risk)} is over the ${pct(OK_BELOW)} threshold.`;
+  return `Low risk: ${pct(b.risk)} is under the ${pct(OK_BELOW)} threshold (${age}). Version unchanged.`;
+}
+
+// =============== writing and verifying notes: Gemini if a key is given, else simple text handling ===============
+const sentences = text => text.trim().split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(Boolean);
+const simpleNotes = text => sentences(text).slice(0, 3);
+const simpleVerify = (old, text) => (old.every(p => text.includes(p)) ? old : simpleNotes(text));
+
+async function fetchJson(url, opts, service) {
+  let res;
+  try { res = await fetch(url, opts); }
+  catch (e) { throw new Error(`${service} could not be reached. Check your internet connection.`); }
+  if (!res.ok) {
+    let detail = "";
+    try { const j = await res.json(); detail = typeof j.error === "string" ? j.error : ((j.error && j.error.message) || JSON.stringify(j)); } catch (e) {}
+    throw new Error(`${service} returned HTTP ${res.status}: ${detail.slice(0, 150)}`);
+  }
+  return res.json();
+}
+const parseJson = text => {
+  const m = text.match(/[\[{][\s\S]*[\]}]/);
+  if (!m) throw new Error("The AI reply was not JSON.");
+  return JSON.parse(m[0]);
+};
+
+let modelCache = { key: null, list: null };
+async function geminiModels(key) {
+  if (modelCache.key === key && modelCache.list) return modelCache.list;
+  const data = await fetchJson("https://generativelanguage.googleapis.com/v1beta/models?pageSize=200",
+    { headers: { "x-goog-api-key": key } }, "Gemini (model list)");
+  const names = (data.models || [])
+    .filter(m => (m.supportedGenerationMethods || []).includes("generateContent") && m.name.startsWith("models/gemini"))
+    .map(m => m.name.split("/")[1]);
+  const skip = ["image", "tts", "live", "audio", "exp", "preview", "thinking", "8b", "vision"];
+  const ok = names.filter(n => !skip.some(s => n.includes(s)));
+  const desc = (a, b) => (a < b ? 1 : -1);
+  const list = [
+    ...ok.filter(n => n.includes("flash") && !n.includes("lite")).sort(desc),
+    ...ok.filter(n => n.includes("flash") && n.includes("lite")).sort(desc),
+    ...ok.filter(n => !n.includes("flash")).sort(desc)
+  ];
+  if (!list.length) throw new Error("Gemini: this key has no model that supports generateContent.");
+  modelCache = { key, list };
+  return list;
+}
+
+// stats.aiRequests counts every real generateContent request, including retries on other models
+async function askGemini(prompt, stats) {
+  if (AI_PROXY_URL) {           // the proxy holds the key and retries other models itself
+    const r = await fetchJson(AI_PROXY_URL, { method: "POST", headers: { "content-type": "application/json" },
+                                              body: JSON.stringify({ prompt }) }, "AI service");
+    if (stats) stats.aiRequests += r.attempts || 1;
+    return r.text;
+  }
+  const key = getKey();
+  const models = await geminiModels(key);
+  let last;
+  for (const model of models.slice(0, 4)) {       // free keys have separate limits per model
+    try {
+      if (stats) stats.aiRequests++;
+      const r = await fetchJson(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+        { method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": key },
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json" } }) },
+        "Gemini");
+      return r.candidates[0].content.parts[0].text;
+    } catch (e) {
+      last = e;
+      if (!/HTTP (429|404|503)/.test(e.message)) throw e;
+    }
+  }
+  throw last;
+}
+
+async function writeNotes(name, text, stats) {
+  if (!hasAI()) return simpleNotes(text);
+  const out = parseJson(await askGemini(
+    `Write 3 to 5 short study note bullet points about '${name}'. Use ONLY the source text below. ` +
+    `Reply with a JSON list of strings and nothing else.\n\nSOURCE:\n${text}`, stats));
+  if (!Array.isArray(out) || !out.length) throw new Error("The AI returned no notes.");
+  return out.map(String);
+}
+
+async function verifyNotes(name, old, text, stats) {
+  if (!hasAI()) return { points: simpleVerify(old, text), method: "text" };
+  const out = parseJson(await askGemini(
+    `Study notes about '${name}':\n${JSON.stringify(old)}\n\nCurrent source text:\n${text}\n\n` +
+    `If every note is still supported by the source, reply {"still_correct": true}. Otherwise reply ` +
+    `{"still_correct": false, "notes": [3 to 5 corrected bullet points using ONLY the source]}. Reply with JSON only.`, stats));
+  if (out.still_correct) return { points: old, method: "ai" };
+  if (!Array.isArray(out.notes) || !out.notes.length) throw new Error("The AI returned no notes.");
+  return { points: out.notes.map(String), method: "ai" };
+}
+
+// =============== sources: made-up samples, or the live Wikipedia API ===============
+const SAMPLE_TODAY = Date.UTC(2026, 9, 11);
+const SAMPLE_TEXT = {
+  "Pythagorean theorem": ["1001", "The Pythagorean theorem states that in a right triangle the square of the hypotenuse equals the sum of the squares of the other two sides. It is written as a squared plus b squared equals c squared. The converse is also true. The theorem has hundreds of known proofs."],
+  "Photosynthesis": ["2002", "Photosynthesis is the process plants use to turn light energy into chemical energy. It takes place mainly in the chloroplasts of leaf cells. Carbon dioxide and water are converted into glucose and oxygen."],
+  "Python (programming language)": ["3007", "Python is a high-level, general-purpose programming language. Its design stresses code readability. The latest stable release at the time of writing is version 3.14."],
+  "Periodic table": ["4004", "The periodic table arranges the chemical elements by atomic number. Elements in the same column share similar chemical properties. The table currently lists 118 confirmed elements."],
+  "Mitochondrion": ["5005", "Mitochondria are organelles found in most eukaryotic cells. They produce most of the cell's ATP. They have their own small genome inherited from the mother."]
+};
+function sampleTopics() {
+  const mk = (name, title, speed, daysAgo, rev, notes) =>
+    ({ name, title, speed, lastChecked: SAMPLE_TODAY - daysAgo * DAY, rev, notes: notes || sentences(SAMPLE_TEXT[title][1]).slice(0, 3) });
+  return [
+    mk("Pythagorean theorem", "Pythagorean theorem", "stable", 40, "1001"),
+    mk("Photosynthesis", "Photosynthesis", "slow", 200, "2002"),
+    mk("Python", "Python (programming language)", "fast", 21, "3001",
+       ["Python is a high-level, general-purpose programming language.", "Its design stresses code readability.",
+        "The latest stable release at the time of writing is version 3.12."]),
+    mk("Periodic table", "Periodic table", "fast", 500, "4004"),
+    mk("Mitochondrion", "Mitochondrion", "fast", 300, "5005")
+  ];
+}
+
+const WIKI = "https://en.wikipedia.org/w/api.php";
+const wikiGet = params => fetchJson(`${WIKI}?${new URLSearchParams({ format: "json", formatversion: "2", origin: "*", redirects: "1", ...params })}`, {}, "Wikipedia");
+// {requestedTitle: {rev, title}} for pages that exist
+async function wikiVersions(titles) {
+  if (!titles.length) return {};
+  const data = await wikiGet({ action: "query", prop: "revisions", rvprop: "ids", titles: titles.join("|") });
+  const map = {};
+  for (const n of (data.query.normalized || []).concat(data.query.redirects || [])) map[n.from] = n.to;
+  const revs = {};
+  for (const p of data.query.pages) if (p.revisions) revs[p.title] = String(p.revisions[0].revid);
+  const out = {};
+  for (const t of titles) {
+    let f = t; for (let i = 0; i < 3; i++) f = map[f] || f;
+    if (revs[f] !== undefined) out[t] = { rev: revs[f], title: f };
+  }
+  return out;
+}
+async function wikiText(title) {
+  const data = await wikiGet({ action: "query", prop: "extracts", exintro: "1", explaintext: "1", titles: title });
+  const page = data.query.pages[0];
+  if (!page || !page.extract) throw new Error("That page has no text.");
+  return page.extract.slice(0, 4000);
+}
+
+// =============== browser storage helpers (can be blocked, so never rely on it) ===============
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+  del(k) { try { localStorage.removeItem(k); } catch (e) {} }
+};
+// If you deploy worker.js (see README), paste its address here. Visitors then need no key at all.
+const AI_PROXY_URL = "/ai";
+
+let memoryKey = "";
+const getKey = () => ($("apiKey").value.trim() || memoryKey || "");
+const hasAI = () => !!AI_PROXY_URL || !!getKey();
+
+// =============== page ===============
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const LABEL = { unverified: "Not verified (source unreachable)", ok: "Up to date", rechecked: "Re-checked, no change", updated: "Updated from source", old: "Needs checking", outdated: "Outdated, verify" };
+
+let mode = "sample", liveTopics = [], runId = 0, busy = false;
+const vcache = new Map();                       // re-check results reused for 10 minutes to save requests
+const TTL = 10 * 60 * 1000;
+
+function loadLive() {
+  try { const v = JSON.parse(store.get("studymate_topics_v1") || "[]"); liveTopics = Array.isArray(v) ? v : []; }
+  catch (e) { liveTopics = []; }
+}
+const saveLive = () => store.set("studymate_topics_v1", JSON.stringify(liveTopics));
+const budgetNow = () => Math.max(0, Math.min(10, parseInt($("budget").value, 10) || 0));
+
+function setMsg(text, bad) { const el = $("msg"); el.hidden = !text; el.textContent = text || ""; el.className = "msg" + (bad ? " bad" : ""); }
+
+function methodText(r) {
+  if (!r.method) return null;
+  if (mode === "sample") return "Simulated sample source (no network, no AI)";
+  return r.method === "ai" ? "Gemini AI compared the notes with the live page" : "Plain text match against the live page (no AI)";
+}
+
+function whyHtml(r) {
+  const rev = mode === "sample"
+    ? `${esc(r.storedRev)} → ${esc(r.latestRev ?? "unknown")} <span class="muted">(simulated)</span>`
+    : `${esc(r.storedRev)} → ${esc(r.latestRev ?? "unknown")}`;
+  const demo = r.demo
+    ? `<dt>Demo</dt><dd>The stale state was simulated by the demo button. The correction itself, if any, comes from the real current page.</dd>` : "";
+  const how = methodText(r);
+  return `<details class="why"><summary>Why this status?</summary><dl>
+    <dt>Source revision</dt><dd>saved ${rev} ${r.changed ? "(changed)" : ""}</dd>
+    <dt>Last checked</dt><dd>${esc(dateText(r.lastChecked))} (${r.days} days ago)</dd>
+    <dt>Estimated risk</dt><dd><span class="riskbar"><i style="width:${Math.round(r.risk * 100)}%"></i></span>${pct(r.risk)}</dd>
+    <dt>Reason</dt><dd>${esc(r.reason)}</dd>
+    <dt>Action</dt><dd>${esc(r.action)}</dd>
+    ${how ? `<dt>Checked by</dt><dd>${esc(how)}</dd>` : ""}${demo}
+  </dl></details>`;
+}
+
+function renderNew(rows) {
+  $("after").innerHTML = rows.map(r =>
+    `<div class="topic" data-status="${r.status}"><h3 class="hand">${esc(r.name)}</h3>` +
+    `<span class="pill p-${r.status}">${esc(LABEL[r.status])}</span>` +
+    `<div class="kp-label">Key points</div><ul class="hand">${r.points.map(p => `<li>${esc(p)}</li>`).join("")}</ul>` +
+    whyHtml(r) + `</div>`).join("");
+}
+function renderOld(topics) {
+  $("before").innerHTML = topics.map(t =>
+    `<div class="topic"><h3 class="hand">${esc(t.name)}</h3><div class="kp-label">Key points</div>` +
+    `<ul class="hand">${t.notes.map(p => `<li>${esc(p)}</li>`).join("")}</ul></div>`).join("");
+}
+function emptyNotes() {
+  const html = '<div class="empty">No topics yet. Type a Wikipedia page title above, for example Photosynthesis, and press Add topic.</div>';
+  $("after").innerHTML = html; $("before").innerHTML = html;
+}
+
+function renderChips() {
+  const el = $("chips");
+  if (mode !== "live" || !liveTopics.length) { el.innerHTML = ""; return; }
+  el.innerHTML = liveTopics.map((t, i) =>
+    `<div class="chip"><b>${esc(t.name)}</b>` +
+    `<button class="ghost small" data-act="stale" data-i="${i}" type="button">Simulate stale (demo)</button>` +
+    `<button class="ghost small" data-act="remove" data-i="${i}" type="button">Remove</button></div>`).join("");
+}
+
+function renderSummary(rows, fetches, budget, stats, live) {
+  const n = rows.length;
+  const updated = rows.filter(r => r.status === "updated").length;
+  const unchanged = rows.filter(r => r.status === "rechecked").length;
+  const flaggedN = rows.filter(r => r.flagged).length;
+  $("sumChecked").textContent = n;
+  $("subChecked").textContent = `${fetches} of ${budget} re-checks used · ${n - fetches - flaggedN} low risk`;
+  $("sumUpdated").textContent = updated;
+  $("subUpdated").textContent = `${unchanged} re-checked with no change`;
+  $("sumFlagged").textContent = flaggedN;
+  $("subFlagged").textContent = flaggedN ? "kept with a warning, verify these yourself" : "nothing left to verify";
+  $("sumAI").textContent = stats.aiRequests;
+  $("subAI").textContent = !live ? "simulated sample data, no real AI"
+    : hasAI() ? `Gemini${stats.cacheHits ? ` · ${stats.cacheHits} reused from cache` : ""}` : "no key: plain text match instead of AI";
+}
+
+function makeVerify(live, stats) {
+  const raw = async t => {
+    const text = live ? await wikiText(t.title) : SAMPLE_TEXT[t.title][1];
+    return live ? verifyNotes(t.name, t.notes, text, stats) : { points: simpleVerify(t.notes, text), method: "simulated" };
+  };
+  return t => {
+    const k = [mode, hasAI(), t.name, t.rev, t.lastChecked, JSON.stringify(t.notes)].join("|");
+    const hit = vcache.get(k);
+    if (hit && Date.now() - hit.at < TTL) { stats.cacheHits++; return hit.p; }
+    const p = raw(t);
+    vcache.set(k, { p, at: Date.now() });
+    p.catch(() => vcache.delete(k));
+    return p;
+  };
+}
+
+// one source lookup; a failure is reported, never hidden
+async function lookup(topics, live) {
+  if (!live) { const latest = {}; for (const [k, v] of Object.entries(SAMPLE_TEXT)) latest[k] = v[0]; return { latest, lookupOk: true }; }
+  try {
+    const v = await wikiVersions(topics.map(t => t.title));
+    const latest = {}; for (const [k, x] of Object.entries(v)) latest[k] = x.rev;
+    return { latest, lookupOk: true };
+  } catch (e) { return { latest: {}, lookupOk: false, error: e.message }; }
+}
+
+let lastInputs = null;       // what the comparison needs
+
+async function refresh() {
+  const my = ++runId;
+  const live = mode === "live";
+  const topics = live ? liveTopics : sampleTopics();
+  const today = live ? Date.now() : SAMPLE_TODAY;
+  const budget = budgetNow();
+  $("budgetVal").textContent = budget;
+
+  renderChips();
+  $("stage").className = "stage" + ($("showOld").checked ? "" : " solo");
+  $("oldCol").hidden = !$("showOld").checked;
+  $("cmpBtn").hidden = !live;
+
+  if (!topics.length) {
+    emptyNotes(); ["sumChecked", "sumUpdated", "sumFlagged", "sumAI"].forEach(i => $(i).textContent = 0);
+    ["subChecked", "subUpdated", "subFlagged", "subAI"].forEach(i => $(i).textContent = "");
+    $("status").textContent = "Source: live Wikipedia. Add a topic to begin.";
+    $("banner").hidden = true; $("cmpTable").hidden = $("cmpLegend").hidden = $("takeaway").hidden = true; lastInputs = null;
+    return;
+  }
+  renderOld(topics);
+  $("after").innerHTML = '<div class="empty">Checking…</div>';
+
+  const stats = { aiRequests: 0, cacheHits: 0 }, errors = [];
+  const { latest, lookupOk, error } = await lookup(topics, live);
+  const verify0 = makeVerify(live, stats);
+  const verify = async t => { try { return await verify0(t); } catch (e) { errors.push(`${t.name}: ${e.message}`); throw e; } };
+  const res = await checkTopics(topics, latest, verify, today, budget, { lookupOk });
+  if (my !== runId) return;                       // a newer run started, drop this one
+
+  lastInputs = { topics, latest, lookupOk, today, live };
+  renderNew(res.rows);
+  renderSummary(res.rows, res.fetches, budget, stats, live);
+  const srcName = !live ? "sample data (made-up texts, simulated)" : lookupOk ? "live Wikipedia (revisions stand in for textbook versions)" : "live Wikipedia (unreachable)";
+  $("status").textContent = `Source: ${srcName} · 1 source lookup · ${res.fetches} re-check(s) this run`;
+
+  const banner = $("banner");
+  banner.hidden = lookupOk;
+  if (!lookupOk) banner.textContent = `The source lookup failed (${error}). Version checks were skipped, so every topic is judged by age only and no re-checks were attempted. Treat the notes below with caution.`;
+  if (errors.length) setMsg("Some re-checks failed, so those topics keep a warning: " + [...new Set(errors)].join(" | "), true);
+
+  if (!live) runComparison(); else { $("cmpTable").hidden = $("cmpLegend").hidden = $("takeaway").hidden = true; $("cmpNote").textContent = "Press Compare budgets to run the same check at several budgets. Results are cached, so each topic is verified at most once."; }
+}
+
+// =============== cost versus freshness ===============
+async function runComparison() {
+  if (!lastInputs) return;
+  const { topics, latest, lookupOk, today, live } = lastInputs;
+  const stats = { aiRequests: 0, cacheHits: 0 };
+  const verify = makeVerify(live, stats);
+  const rows = [];
+  for (let b = 0; b <= 8; b++) {
+    const r = await checkTopics(topics, latest, async t => { try { return await verify(t); } catch (e) { throw e; } }, today, b, { lookupOk });
+    if (b > 0 && r.fetches < b) break;            // budget already covers every risky topic
+    rows.push({ b, fetches: r.fetches,
+      updated: r.rows.filter(x => x.status === "updated").length,
+      unchanged: r.rows.filter(x => x.status === "rechecked").length,
+      flagged: r.rows.filter(x => x.flagged).length });
+  }
+  const cur = budgetNow();
+  const n = topics.length;
+  $("cmpBody").innerHTML = rows.map(r => {
+    const w = k => `${(r[k] / n) * 100}%`;
+    return `<tr class="${r.b === cur ? "cur" : ""}"><td>${r.b}${r.b === cur ? " (now)" : ""}</td><td>${r.fetches}</td><td>${r.updated}</td><td>${r.unchanged}</td><td>${r.flagged}</td>` +
+      `<td><div class="bar" title="of ${n} topics"><i class="u" style="width:${w("updated")}"></i><i class="r" style="width:${w("unchanged")}"></i><i class="f" style="width:${w("flagged")}"></i></div></td></tr>`;
+  }).join("");
+  $("cmpTable").hidden = $("cmpLegend").hidden = false;
+
+  const first = rows[0], last = rows[rows.length - 1];
+  const tk = $("takeaway"); tk.hidden = false;
+  if (rows.length === 1) tk.textContent = "No topic is risky enough to need a re-check, so no budget is needed: nothing is flagged and no requests are used.";
+  else tk.textContent = `With a budget of 0, no re-checks are made but ${first.flagged} of ${n} topics are flagged for manual verification. ` +
+    `A budget of ${last.b} uses ${last.fetches} re-check(s) and leaves ${last.flagged} flagged (${last.updated} updated, ${last.unchanged} confirmed unchanged). ` +
+    `Spending more than ${last.b} would not change anything for these topics.`;
+  $("cmpNote").textContent = live ? `This comparison used ${stats.aiRequests} new AI request(s); ${stats.cacheHits} result(s) were reused from cache.` : "Computed from the sample data. No network or AI used.";
+}
+
+// =============== adding, simulating and removing topics ===============
+async function addTopic() {
+  if (busy) return;
+  const raw = $("addTitle").value.trim();
+  if (!raw) { setMsg("Type a Wikipedia page title first, for example Photosynthesis.", true); return; }
+  busy = true; $("addBtn").disabled = true; setMsg("Adding…");
+  try {
+    const v = (await wikiVersions([raw]))[raw];
+    if (!v) throw new Error(`No Wikipedia page called "${raw}" was found. Use the exact page title.`);
+    const text = await wikiText(v.title);
+    if (/\b(may|might) (also )?refer to\b/i.test(text.slice(0, 300)))
+      throw new Error(`"${v.title}" is a disambiguation page (it lists several meanings). Use a more specific title, for example "Data structure" instead of "DSA".`);
+    let notes, warn = "";
+    try { notes = await writeNotes(v.title, text, { aiRequests: 0 }); }
+    catch (e) { notes = simpleNotes(text); warn = ` The AI could not write the notes (${e.message}), so the page's first sentences were used.`; }
+    liveTopics = liveTopics.filter(t => t.title !== v.title);
+    liveTopics.push({ name: v.title, title: v.title, speed: $("addSpeed").value, lastChecked: Date.now(), rev: v.rev, notes });
+    saveLive(); $("addTitle").value = "";
+    setMsg(`Added ${v.title}.${warn}`, !!warn);
+  } catch (e) { setMsg("Could not add that topic: " + e.message, true); }
+  finally { busy = false; $("addBtn").disabled = false; refresh(); }
+}
+
+function makeStale(i) {
+  const t = liveTopics[i]; if (!t) return;
+  t.rev = "0";                                    // an older revision than the real one
+  t.lastChecked = Date.now() - 400 * DAY;
+  t.notes = ["OUTDATED DEMO NOTE: these notes were written from an old version of the page."];
+  t.demo = true;                                  // labelled as simulated everywhere it is explained
+  saveLive();
+  setMsg(`Simulated a stale graph for ${t.name}. Compare the two columns. Set the budget to 0 to see the warning instead of the fix.`);
+  refresh();
+}
+
+function setMode(m) {
+  mode = m;
+  $("modeSample").className = m === "sample" ? "on" : "";
+  $("modeLive").className = m === "live" ? "on" : "";
+  $("livePanel").hidden = m !== "live";
+  setMsg(""); refresh();
+}
+
+function init() {
+  loadLive();
+  const saved = store.get("studymate_key_v1");
+  if (saved) { $("apiKey").value = saved; $("rememberKey").checked = true; }
+  $("modeSample").onclick = () => setMode("sample");
+  $("modeLive").onclick = () => setMode("live");
+  $("budget").oninput = () => refresh();
+  $("showOld").onchange = () => refresh();
+  $("addBtn").onclick = addTopic;
+  $("cmpBtn").onclick = async () => { $("cmpBtn").disabled = true; try { await runComparison(); } finally { $("cmpBtn").disabled = false; } };
+  $("addTitle").onkeydown = e => { if (e.key === "Enter") addTopic(); };
+  $("chips").onclick = e => {
+    const b = e.target.closest("button"); if (!b) return;
+    const i = +b.dataset.i;
+    if (b.dataset.act === "remove") { liveTopics.splice(i, 1); saveLive(); setMsg(""); refresh(); }
+    if (b.dataset.act === "stale") makeStale(i);
+  };
+  $("apiKey").onchange = () => {
+    memoryKey = $("apiKey").value.trim();
+    if ($("rememberKey").checked) store.set("studymate_key_v1", memoryKey);
+    refresh();
+  };
+  $("rememberKey").onchange = () => {
+    if ($("rememberKey").checked) store.set("studymate_key_v1", $("apiKey").value.trim());
+    else store.del("studymate_key_v1");
+  };
+  $("examples").onclick = e => {
+    const b = e.target.closest("button[data-ex]"); if (!b) return;
+    $("addTitle").value = b.dataset.ex; addTopic();
+  };
+  if (AI_PROXY_URL) {            // visitors just type a topic: no key box, start in live mode
+    $("keyRow").hidden = true;
+    $("keyHelp").textContent = "AI notes are provided by this site. Just type a topic. Live mode uses Wikipedia page revisions as a stand-in for textbook or knowledge-graph version changes.";
+    setMode("live");
+  } else refresh();
+}
+init();
+</script>
+</body>
+</html>

@@ -18,9 +18,6 @@ The project focuses on making learning resources easier to discover, organize, a
 
 Live Demo: https://ujjwallty.github.io/studymate-note/
 
-GitHub Repository: https://github.com/ujjwallTY/studymate-note
-
-The live demo hosts the frontend through GitHub Pages. Backend-dependent AI features require the backend to be deployed and configured correctly.
 
 4. Technologies & AI Tools Used
 
